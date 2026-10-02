@@ -1,23 +1,27 @@
 import { useState } from "react";
-import { api } from "../store.js";
+import { api, isCloud } from "../store.js";
 import { TopBar, Notice } from "../components/ui.jsx";
 
 export default function Auth({ params, go, onUser }) {
   const [mode, setMode] = useState(params?.mode === "signin" ? "signin" : "signup");
   const [f, setF] = useState({ firstName: "", lastName: "", email: "", password: "" });
   const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setErr("");
+    setBusy(true);
     try {
-      const user = mode === "signup" ? api.signUp(f) : api.signIn(f);
+      const user = await (mode === "signup" ? api.signUp(f) : api.signIn(f));
       onUser(user);
       go(user.birthDate ? "dashboard" : "onboarding");
     } catch (e2) {
       setErr(e2.message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -51,7 +55,9 @@ export default function Auth({ params, go, onUser }) {
             <input type="password" value={f.password} onChange={set("password")} required minLength={6} placeholder="At least 6 characters" />
           </label>
           {err && <div className="error">{err}</div>}
-          <button className="btn" type="submit">{mode === "signup" ? "Create account" : "Sign in"}</button>
+          <button className="btn" type="submit" disabled={busy}>
+            {busy ? "One moment…" : mode === "signup" ? "Create account" : "Sign in"}
+          </button>
         </form>
 
         <div className="btn-row">
@@ -69,8 +75,9 @@ export default function Auth({ params, go, onUser }) {
         </div>
 
         <Notice>
-          Your name, birth date and saved profiles stay private to your account. This demo build stores
-          data locally on your device — no server, no sharing. You can delete everything from Profile.
+          {isCloud
+            ? "Your name, birth date and saved profiles stay private to your account and are stored securely. You can delete everything from Profile."
+            : "Your name, birth date and saved profiles stay private to your account. This demo build stores data locally on your device — no server, no sharing. You can delete everything from Profile."}
         </Notice>
       </div>
     </>
