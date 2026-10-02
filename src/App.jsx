@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api } from "./store.js";
+import { api, onAuthChange } from "./store.js";
 import { BottomNav } from "./components/ui.jsx";
 import Landing from "./screens/Landing.jsx";
 import Auth from "./screens/Auth.jsx";
@@ -19,8 +19,9 @@ import Admin from "./screens/Admin.jsx";
 const NAV_ROUTES = ["dashboard", "mycode", "relationships", "devotional", "bible", "profile"];
 
 export default function App() {
-  const [user, setUser] = useState(() => api.current());
-  const [route, setRoute] = useState(() => (api.current() ? "dashboard" : "landing"));
+  const [user, setUser] = useState(null);
+  const [ready, setReady] = useState(false);
+  const [route, setRoute] = useState("landing");
   const [params, setParams] = useState({});
 
   function go(next, p = {}) {
@@ -30,6 +31,18 @@ export default function App() {
   }
 
   useEffect(() => { document.title = "GodCode — Decode Your Identity. Discover God's Design."; }, []);
+
+  // Restore any existing session (async in cloud mode), then land signed-in users on the dashboard.
+  useEffect(() => {
+    let alive = true;
+    api.current().then((u) => { if (alive) { setUser(u); setReady(true); } });
+    const off = onAuthChange((u) => setUser(u));
+    return () => { alive = false; off(); };
+  }, []);
+
+  useEffect(() => {
+    if (ready && user && route === "landing") setRoute("dashboard");
+  }, [ready, user, route]);
 
   const guard = (el) => (user ? el : <Landing go={go} />);
   const common = { user, go, params, onUser: setUser };
@@ -56,6 +69,14 @@ export default function App() {
     case "sixsixsix": screen = <BibleTab go={go} params={{ tab: "666" }} />; break;
     case "number": screen = <NumberDetail {...common} />; break;
     default: screen = <Landing go={go} />;
+  }
+
+  if (!ready) {
+    return (
+      <div className="app" style={{ display: "grid", placeItems: "center", minHeight: "100dvh" }}>
+        <p className="muted">GodCode…</p>
+      </div>
+    );
   }
 
   const showNav = !!user && !["landing", "auth"].includes(route);
