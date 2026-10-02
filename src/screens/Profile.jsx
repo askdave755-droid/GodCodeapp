@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { TopBar, Notice, Disclaimer } from "../components/ui.jsx";
-import { api } from "../store.js";
+import { api, isCloud } from "../store.js";
 
 const PREMIUM = [
   "Full identity profile", "Advanced relationship compatibility", "Extended number library",
@@ -16,9 +16,9 @@ export default function Profile({ user, go, onUser, onSignOut }) {
   const [saved, setSaved] = useState(false);
   const set = (k) => (e) => { setF({ ...f, [k]: e.target.value }); setSaved(false); };
 
-  function savePatch(e) {
+  async function savePatch(e) {
     e.preventDefault();
-    onUser(api.update(f));
+    onUser(await api.update(f));
     setSaved(true);
   }
 
@@ -26,13 +26,13 @@ export default function Profile({ user, go, onUser, onSignOut }) {
     const file = e.target.files?.[0];
     if (!file) return;
     const r = new FileReader();
-    r.onload = () => onUser(api.update({ photo: r.result }));
+    r.onload = async () => onUser(await api.update({ photo: r.result }));
     r.readAsDataURL(file);
   }
 
-  function removeAccount() {
-    if (!confirm("Delete your account and all associated data from this device? This cannot be undone.")) return;
-    api.deleteAccount();
+  async function removeAccount() {
+    if (!confirm("Delete your account and all associated data? This cannot be undone.")) return;
+    await api.deleteAccount();
     onSignOut();
   }
 
@@ -91,12 +91,18 @@ export default function Profile({ user, go, onUser, onSignOut }) {
           <h3 style={{ marginTop: 10 }}>Premium</h3>
           <p className="muted small">Free includes your basic GodCode, number meaning, Scripture, daily devotional and basic prayer. GodCode+ adds:</p>
           <ul className="check">{PREMIUM.map((p) => <li key={p}>{p}</li>)}</ul>
-          <button
-            className="btn"
-            onClick={() => onUser(api.update({ plan: user.plan === "premium" ? "free" : "premium" }))}
-          >
-            {user.plan === "premium" ? "Switch back to Free (demo)" : "Preview GodCode+ (demo toggle)"}
-          </button>
+          {isCloud ? (
+            <p className="xs gold" style={{ marginTop: 4, marginBottom: 0 }}>
+              GodCode+ launches soon — paid plans connect here through Stripe.
+            </p>
+          ) : (
+            <button
+              className="btn"
+              onClick={() => onUser(api.update({ plan: user.plan === "premium" ? "free" : "premium" }))}
+            >
+              {user.plan === "premium" ? "Switch back to Free (demo)" : "Preview GodCode+ (demo toggle)"}
+            </button>
+          )}
           <p className="xs muted" style={{ marginTop: 10, marginBottom: 0 }}>
             Payment is intentionally not hard-coded. The subscription model, plan field, and gating hooks are
             in place so Stripe can be connected at deploy time.
@@ -109,14 +115,15 @@ export default function Profile({ user, go, onUser, onSignOut }) {
             Your name, birth date, email, relationship entries and saved profiles are private to your
             account. Nothing is published, and shared cards include only your first name and number.
           </p>
-          <button className="btn ghost" onClick={() => { api.signOut(); onSignOut(); }}>Sign out</button>
+          <button className="btn ghost" onClick={async () => { await api.signOut(); onSignOut(); }}>Sign out</button>
           <div style={{ height: 10 }} />
           <button className="btn ghost" style={{ color: "#ffb4a8" }} onClick={removeAccount}>Delete account & data</button>
         </div>
 
         <Notice>
-          This demo build stores everything locally in your browser. In production the same API surface
-          points at an authenticated server where each user can only read their own records.
+          {isCloud
+            ? "Your data is stored in your private account and is never shared."
+            : "This demo build stores everything locally in your browser. In production the same API surface points at an authenticated server where each user can only read their own records."}
         </Notice>
         <Disclaimer />
       </div>
