@@ -14,13 +14,17 @@ export default function Onboarding({ user, go, onUser }) {
   const [err, setErr] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const calc = calculateGodCode(f.birthDate);
     if (!calc) return setErr("Please enter a valid birth date.");
-    const updated = api.update(f);
-    onUser(updated);
-    go("mycode");
+    try {
+      const updated = await api.update(f);
+      onUser(updated);
+      go("mycode");
+    } catch (e2) {
+      setErr(e2.message);
+    }
   }
 
   return (
