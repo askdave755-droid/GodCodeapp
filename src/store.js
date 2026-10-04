@@ -1,4 +1,4 @@
-// ============================================================
+no// ============================================================
 // Data layer — the UI only ever talks to `api`:
 //   current()          → user | null
 //   signUp(f)          → user   (async)
@@ -293,3 +293,4 @@ export function onAuthChange(callback) {
   });
   return () => subscription.unsubscribe();
 }
+export { isCloud };
